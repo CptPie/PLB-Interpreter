@@ -2,103 +2,78 @@ package lexer
 
 import (
 	"PLB/token"
+	"os"
 	"testing"
 )
 
 // TODO split into more tests
 
-func TestNextToken(t *testing.T) {
-	input := `let five = 5;
-let float = 5.5;
-let hex = 0x5;
-let oct = 05;
-let ten = 10;
-let negten = -10;
-let negfloat = -10.0;
-let add = fn(x, y) {
-x + y;
-};
-let result = add(five, ten);
-`
+func TestNextToken_SimpleTokens(t *testing.T) {
+	rawInput, err := os.ReadFile("../sources/simpleTokens")
+	if err != nil {
+		t.Fatalf("Error while opening test source file: %s", err.Error())
+	}
 	tests := []struct {
 		expectedType    token.TokenType
 		expectedLiteral string
 	}{
 		{token.LET, "let"},
-		{token.LABEL, "five"},
-		{token.ASSIGN, "="},
+		{token.WHITESPACE, " "},
 		{token.INT, "5"},
-		{token.SEMICOLON, ";"},
+		{token.WHITESPACE, " "},
+		{token.PREPOSITION, "into"},
+		{token.WHITESPACE, " "},
+		{token.LABEL, "integer"},
 		{token.NEWLINE, "\n"},
+
 		{token.LET, "let"},
-		{token.LABEL, "float"},
-		{token.ASSIGN, "="},
+		{token.WHITESPACE, " "},
 		{token.FLOAT, "5.5"},
-		{token.SEMICOLON, ";"},
+		{token.WHITESPACE, " "},
+		{token.PREPOSITION, "to"},
+		{token.WHITESPACE, " "},
+		{token.LABEL, "float"},
 		{token.NEWLINE, "\n"},
+
 		{token.LET, "let"},
-		{token.LABEL, "hex"},
-		{token.ASSIGN, "="},
-		{token.HEX, "0x5"},
-		{token.SEMICOLON, ";"},
+		{token.WHITESPACE, " "},
+		{token.INT, "-5"},
+		{token.WHITESPACE, " "},
+		{token.PREPOSITION, "INTO"},
+		{token.WHITESPACE, " "},
+		{token.LABEL, "negative_int"},
 		{token.NEWLINE, "\n"},
+
 		{token.LET, "let"},
+		{token.WHITESPACE, " "},
+		{token.FLOAT, "-5.5"},
+		{token.WHITESPACE, " "},
+		{token.PREPOSITION, "TO"},
+		{token.WHITESPACE, " "},
+		{token.LABEL, "negativeFloat"},
+		{token.NEWLINE, "\n"},
+
+		{token.LET, "let"},
+		{token.WHITESPACE, " "},
+		{token.OCT, "07"},
+		{token.WHITESPACE, " "},
+		{token.PREPOSITION, "in"},
+		{token.WHITESPACE, " "},
 		{token.LABEL, "oct"},
-		{token.ASSIGN, "="},
-		{token.OCT, "05"},
-		{token.SEMICOLON, ";"},
 		{token.NEWLINE, "\n"},
+
 		{token.LET, "let"},
-		{token.LABEL, "ten"},
-		{token.ASSIGN, "="},
-		{token.INT, "10"},
-		{token.SEMICOLON, ";"},
+		{token.WHITESPACE, " "},
+		{token.HEX, "0x1283F"},
+		{token.WHITESPACE, " "},
+		{token.PREPOSITION, "IN"},
+		{token.WHITESPACE, " "},
+		{token.LABEL, "hex"},
 		{token.NEWLINE, "\n"},
-		{token.LET, "let"},
-		{token.LABEL, "negten"},
-		{token.ASSIGN, "="},
-		{token.INT, "-10"},
-		{token.SEMICOLON, ";"},
-		{token.NEWLINE, "\n"},
-		{token.LET, "let"},
-		{token.LABEL, "negfloat"},
-		{token.ASSIGN, "="},
-		{token.FLOAT, "-10.0"},
-		{token.SEMICOLON, ";"},
-		{token.NEWLINE, "\n"},
-		{token.LET, "let"},
-		{token.LABEL, "add"},
-		{token.ASSIGN, "="},
-		{token.FUNCTION, "fn"},
-		{token.LPAREN, "("},
-		{token.LABEL, "x"},
-		{token.COMMA, ","},
-		{token.LABEL, "y"},
-		{token.RPAREN, ")"},
-		{token.LBRACE, "{"},
-		{token.NEWLINE, "\n"},
-		{token.LABEL, "x"},
-		{token.PLUS, "+"},
-		{token.LABEL, "y"},
-		{token.SEMICOLON, ";"},
-		{token.NEWLINE, "\n"},
-		{token.RBRACE, "}"},
-		{token.SEMICOLON, ";"},
-		{token.NEWLINE, "\n"},
-		{token.LET, "let"},
-		{token.LABEL, "result"},
-		{token.ASSIGN, "="},
-		{token.LABEL, "add"},
-		{token.LPAREN, "("},
-		{token.LABEL, "five"},
-		{token.COMMA, ","},
-		{token.LABEL, "ten"},
-		{token.RPAREN, ")"},
-		{token.SEMICOLON, ";"},
-		{token.NEWLINE, "\n"},
+
 		{token.EOF, ""},
 	}
-	l := New(input)
+	l := New(string(rawInput))
 	for i, tt := range tests {
 		tok := l.NextToken()
 		if tok.Type != tt.expectedType {

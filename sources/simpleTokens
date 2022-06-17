@@ -1,0 +1,6 @@
+let 5 into integer
+let 5.5 to float
+let -5 INTO negative_int
+let -5.5 TO negativeFloat
+let 07 in oct
+let 0x1283F IN hex
