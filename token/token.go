@@ -9,6 +9,8 @@ type Token struct {
 
 const (
 	ILLEGAL = "ILLEGAL"
+	WS      = "WS" // whitespace
+	NL      = "NL" // Newline
 	EOF     = "EOF"
 
 	// Basic elements (doxnum)

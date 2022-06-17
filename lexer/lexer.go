@@ -50,6 +50,10 @@ func (l *Lexer) NextToken() token.Token {
 		tok = newToken(token.LBRACE, l.ch)
 	case '}':
 		tok = newToken(token.RBRACE, l.ch)
+	case '\n':
+		tok = newToken(token.NL, l.ch)
+	case '\r':
+		tok = newToken(token.NL, l.ch)
 	case 0:
 		tok.Literal = ""
 		tok.Type = token.EOF
@@ -104,7 +108,7 @@ func (l *Lexer) readIdentifier() string {
 }
 
 func (l *Lexer) skipWhitespace() {
-	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
+	for l.ch == ' ' || l.ch == '\t' {
 		l.readChar()
 	}
 }
