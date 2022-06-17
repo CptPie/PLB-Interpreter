@@ -28,33 +28,92 @@ func (l *Lexer) readChar() {
 	l.readPosition += 1
 }
 
+func (l *Lexer) peekChar() byte {
+	if l.readPosition >= len(l.input) {
+		return 0
+	} else {
+		return l.input[l.readPosition]
+	}
+}
 func (l *Lexer) NextToken() token.Token {
 	var tok token.Token
 
-	switch l.ch {
-	case '=':
-		tok = newToken(token.EQUAL, l.ch)
-	case ';':
-		tok = newToken(token.SEMICOLON, l.ch)
-	case '(':
-		tok = newToken(token.LPAREN, l.ch)
-	case ')':
-		tok = newToken(token.RPAREN, l.ch)
-	case ',':
-		tok = newToken(token.COMMA, l.ch)
-	case ':':
-		tok = newToken(token.COMMA, l.ch)
-	case '+':
+	switch {
+	// Misc Symbols
+	case l.ch == '$':
+		tok = newToken(token.CURRENCY, l.ch)
+	case l.ch == '#':
+		tok = newToken(token.FORCING, l.ch)
+
+	// Arithmetic operators
+	case l.ch == '+':
 		tok = newToken(token.PLUS, l.ch)
-	case '\n':
+	case l.ch == '-' && l.peekChar() == ' ':
+		tok = newToken(token.MINUS, l.ch)
+	case l.ch == '/':
+		tok = newToken(token.DIVIDE, l.ch)
+	case l.ch == '*':
+		if l.peekChar() == '*' {
+			ch := l.ch
+			l.readChar()
+			literal := string(ch) + string(l.ch)
+			tok = token.Token{
+				Type:    token.EXPONENT,
+				Literal: literal,
+			}
+		} else {
+			tok = newToken(token.MULTIPLY, l.ch)
+		}
+
+	// Relational Operators
+	case l.ch == '=':
+		tok = newToken(token.EQ, l.ch)
+	case l.ch == '<':
+		if l.peekChar() == '>' {
+			ch := l.ch
+			l.readChar()
+			literal := string(ch) + string(l.ch)
+			tok = token.Token{
+				Type:    token.NEQ,
+				Literal: literal,
+			}
+		} else if l.peekChar() == '=' {
+			ch := l.ch
+			l.readChar()
+			literal := string(ch) + string(l.ch)
+			tok = token.Token{
+				Type:    token.LTEQ,
+				Literal: literal,
+			}
+		} else {
+			tok = newToken(token.LT, l.ch)
+		}
+	case l.ch == '>':
+		if l.peekChar() == '=' {
+			ch := l.ch
+			l.readChar()
+			literal := string(ch) + string(l.ch)
+			tok = token.Token{
+				Type:    token.GTEQ,
+				Literal: literal,
+			}
+		} else {
+			tok = newToken(token.GT, l.ch)
+		}
+
+	case l.ch == ';':
+		tok = newToken(token.SEMICOLON, l.ch)
+	case l.ch == '(':
+		tok = newToken(token.LPAREN, l.ch)
+	case l.ch == ')':
+		tok = newToken(token.RPAREN, l.ch)
+	case l.ch == ',' || l.ch == ':':
+		tok = newToken(token.COMMA, l.ch)
+	case l.ch == '\n' || l.ch == '\r':
 		tok = newToken(token.NEWLINE, l.ch)
-	case '\r':
-		tok = newToken(token.NEWLINE, l.ch)
-	case ' ':
+	case l.ch == ' ' || l.ch == '\t':
 		tok = newToken(token.WHITESPACE, l.ch)
-	case '\t':
-		tok = newToken(token.WHITESPACE, l.ch)
-	case 0:
+	case l.ch == 0:
 		tok.Literal = ""
 		tok.Type = token.EOF
 	default:
@@ -66,11 +125,11 @@ func (l *Lexer) NextToken() token.Token {
 			tok.Type = token.OCT
 			tok.Literal = l.readOctal()
 			return tok
-		} else if l.ch == '0' && l.input[l.readPosition] == 'x' && isHex(l.input[l.readPosition+1]) {
+		} else if l.ch == '0' && l.peekChar() == 'x' && isHex(l.input[l.readPosition+1]) {
 			tok.Type = token.HEX
 			tok.Literal = l.readHex()
 			return tok
-		} else if l.ch == '-' && isFloat(l.input[l.readPosition]) || isFloat(l.ch) {
+		} else if l.ch == '-' && isFloat(l.peekChar()) || isFloat(l.ch) {
 			tok.Literal = l.readFloat()
 			if strings.Contains(tok.Literal, ".") {
 				tok.Type = token.FLOAT
@@ -79,7 +138,7 @@ func (l *Lexer) NextToken() token.Token {
 				tok.Type = token.INT
 				return tok
 			}
-		} else if l.ch == '-' && isDigit(l.input[l.readPosition]) || isDigit(l.ch) {
+		} else if l.ch == '-' && isDigit(l.peekChar()) || isDigit(l.ch) {
 			tok.Type = token.INT
 			tok.Literal = l.readNumber()
 			return tok

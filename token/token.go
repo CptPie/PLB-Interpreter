@@ -39,12 +39,12 @@ const (
 	EXPONENT = "**"
 
 	// RELATIONAL OPERATORS
-	EQUAL     = "="
-	NOTEQUAL  = "<>"
-	LESS      = "<"
-	GREATER   = ">"
-	LESSEQ    = "<="
-	GREATEREQ = ">="
+	EQ   = "="
+	NEQ  = "<>"
+	LT   = "<"
+	GT   = ">"
+	LTEQ = "<="
+	GTEQ = ">="
 
 	// LOGICAL OPERATORS
 	AND = "AND"

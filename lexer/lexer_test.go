@@ -87,3 +87,70 @@ func TestNextToken_SimpleTokens(t *testing.T) {
 
 	}
 }
+func TestNextToken_Operators(t *testing.T) {
+	rawInput, err := os.ReadFile("../sources/operators")
+	if err != nil {
+		t.Fatalf("Error while opening test source file: %s", err.Error())
+	}
+	tests := []struct {
+		expectedType    token.TokenType
+		expectedLiteral string
+	}{
+		{token.CURRENCY, "$"},
+		{token.WHITESPACE, " "},
+		{token.FORCING, "#"},
+		{token.NEWLINE, "\n"},
+
+		{token.PLUS, "+"},
+		{token.WHITESPACE, " "},
+		{token.MINUS, "-"},
+		{token.WHITESPACE, " "},
+		{token.MULTIPLY, "*"},
+		{token.WHITESPACE, " "},
+		{token.DIVIDE, "/"},
+		{token.WHITESPACE, " "},
+		{token.EXPONENT, "**"},
+		{token.NEWLINE, "\n"},
+
+		{token.EQ, "="},
+		{token.WHITESPACE, " "},
+		{token.NEQ, "<>"},
+		{token.WHITESPACE, " "},
+		{token.LT, "<"},
+		{token.WHITESPACE, " "},
+		{token.GT, ">"},
+		{token.WHITESPACE, " "},
+		{token.LTEQ, "<="},
+		{token.WHITESPACE, " "},
+		{token.GTEQ, ">="},
+		{token.NEWLINE, "\n"},
+
+		{token.AND, "AND"},
+		{token.WHITESPACE, " "},
+		{token.AND, "and"},
+		{token.WHITESPACE, " "},
+		{token.OR, "OR"},
+		{token.WHITESPACE, " "},
+		{token.OR, "or"},
+		{token.WHITESPACE, " "},
+		{token.NOT, "NOT"},
+		{token.WHITESPACE, " "},
+		{token.NOT, "not"},
+		{token.NEWLINE, "\n"},
+
+		{token.EOF, ""},
+	}
+	l := New(string(rawInput))
+	for i, tt := range tests {
+		tok := l.NextToken()
+		if tok.Type != tt.expectedType {
+			t.Fatalf("tests[%d] - tokentype wrong. expected=%q, got=%q, literal=%q",
+				i, tt.expectedType, tok.Type, tok.Literal)
+		}
+		if tok.Literal != tt.expectedLiteral {
+			t.Fatalf("tests[%d] - literal wrong. expected=%q, got=%q",
+				i, tt.expectedLiteral, tok.Literal)
+		}
+
+	}
+}
