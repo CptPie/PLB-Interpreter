@@ -107,14 +107,13 @@ func (l *Lexer) readIdentifier() string {
 	return l.input[position:l.position] // Read until we encounter a non "isLetter" letter
 }
 
-func (l *Lexer) skipWhitespace() {
-	for l.ch == ' ' || l.ch == '\t' {
-		l.readChar()
-	}
-}
-
 func (l *Lexer) readNumber() string {
 	position := l.position
+	if l.ch == '-' {
+		// if there is a leading minus, advance the readPointer to the next
+		// position but keep var position at the minus
+		l.readChar()
+	}
 	for isDigit(l.ch) {
 		l.readChar()
 	}
@@ -122,7 +121,7 @@ func (l *Lexer) readNumber() string {
 }
 
 func isDigit(ch byte) bool {
-	return '0' <= ch && ch <= '9' || ch == '-'
+	return '0' <= ch && ch <= '9'
 }
 
 func (l *Lexer) readOctal() string {
@@ -150,11 +149,16 @@ func isHex(ch byte) bool {
 
 func (l *Lexer) readFloat() string {
 	position := l.position
+	if l.ch == '-' {
+		// if there is a leading minus, advance the readPointer to the next
+		// position but keep var position at the minus
+		l.readChar()
+	}
 	for isFloat(l.ch) {
 		l.readChar()
 	}
 	return l.input[position:l.position]
 }
 func isFloat(ch byte) bool {
-	return '0' <= ch && ch <= '9' || ch == '.' || ch == '-'
+	return '0' <= ch && ch <= '9' || ch == '.'
 }
