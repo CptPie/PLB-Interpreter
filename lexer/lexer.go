@@ -121,7 +121,7 @@ func (l *Lexer) NextToken() token.Token {
 			tok.Literal = l.readIdentifier()
 			tok.Type = token.LookupIdent(tok.Literal)
 			return tok
-		} else if l.ch == '0' && isOctal(l.input[l.readPosition]) {
+		} else if l.ch == '0' && isOctal(l.peekChar()) {
 			tok.Type = token.OCT
 			tok.Literal = l.readOctal()
 			return tok
@@ -129,7 +129,7 @@ func (l *Lexer) NextToken() token.Token {
 			tok.Type = token.HEX
 			tok.Literal = l.readHex()
 			return tok
-		} else if l.ch == '-' && isFloat(l.peekChar()) || isFloat(l.ch) {
+		} else if (l.ch == '-' && isFloat(l.peekChar())) || isFloat(l.ch) {
 			tok.Literal = l.readFloat()
 			if strings.Contains(tok.Literal, ".") {
 				tok.Type = token.FLOAT
@@ -138,7 +138,7 @@ func (l *Lexer) NextToken() token.Token {
 				tok.Type = token.INT
 				return tok
 			}
-		} else if l.ch == '-' && isDigit(l.peekChar()) || isDigit(l.ch) {
+		} else if (l.ch == '-' && isDigit(l.peekChar())) || isDigit(l.ch) {
 			tok.Type = token.INT
 			tok.Literal = l.readNumber()
 			return tok
