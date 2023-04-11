@@ -81,13 +81,8 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 		tok = newToken(tokens.EOF, '\x00')
 	case '.':
 		if !l.lineHadNonWS {
-			tok.Type = tokens.COMMENT
-			currLine := l.lines[l.line-1]
-			if currLine[len(currLine)-1] == '\r' || currLine[len(currLine)-1] == '\n' {
-				currLine = currLine[:len(currLine)-1]
-			}
-			tok.Literal = strings.TrimSpace(currLine)
-			l.consumeLine()
+			tok = l.handleComment()
+
 		}
 	case ' ', '\t':
 		tok = newToken(tokens.WHITESPACE, l.ch)
@@ -127,13 +122,7 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 		l.lineHadNonWS = true
 	case '*':
 		if !l.lineHadNonWS {
-			tok.Type = tokens.COMMENT
-			currLine := l.lines[l.line-1]
-			if currLine[len(currLine)-1] == '\r' || currLine[len(currLine)-1] == '\n' {
-				currLine = currLine[:len(currLine)-1]
-			}
-			tok.Literal = strings.TrimSpace(currLine)
-			l.consumeLine()
+			tok = l.handleComment()
 		} else {
 			l.lineHadNonWS = true
 			if l.peekChar() == '*' {
@@ -150,13 +139,7 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 		tok = newToken(tokens.SLASH, l.ch)
 	case '+':
 		if !l.lineHadNonWS {
-			tok.Type = tokens.COMMENT
-			currLine := l.lines[l.line-1]
-			if currLine[len(currLine)-1] == '\r' || currLine[len(currLine)-1] == '\n' {
-				currLine = currLine[:len(currLine)-1]
-			}
-			tok.Literal = strings.TrimSpace(currLine)
-			l.consumeLine()
+			tok = l.handleComment()
 		} else {
 			l.lineHadNonWS = true
 			tok = newToken(tokens.PLUS, l.ch)
@@ -314,4 +297,16 @@ func (l *Lexer) consumeLine() {
 			break
 		}
 	}
+}
+
+func (l *Lexer) handleComment() tokens.Token {
+	var tok tokens.Token
+	tok.Type = tokens.COMMENT
+	currLine := l.lines[l.line-1]
+	if currLine[len(currLine)-1] == '\r' || currLine[len(currLine)-1] == '\n' {
+		currLine = currLine[:len(currLine)-1]
+	}
+	tok.Literal = strings.TrimSpace(currLine)
+	l.consumeLine()
+	return tok
 }
