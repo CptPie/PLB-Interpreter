@@ -1,6 +1,7 @@
 package lexer
 
 import (
+	plbErrors "PLB-Interpreter/plbErrors"
 	"PLB-Interpreter/tokens"
 	"bufio"
 	"strings"
@@ -78,11 +79,48 @@ func TestLexer_NextToken_DOXNUM(t *testing.T) {
 			reader := bufio.NewReader(strings.NewReader(tt.input))
 			l := New(reader, "")
 			for i, want := range tt.want {
-				got := l.NextToken()
+				got, _ := l.NextToken()
 				if got != want {
 					t.Errorf("Test %d: got %q, want %q", i, got, want)
 				}
 			}
+		})
+	}
+}
+
+func TestLexer_NextToken_Error(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  error
+	}{
+		{
+			name:  "Invalid token 1",
+			input: "!hello",
+			want:  &plbErrors.PLBError{ErrorCode: "Lexer", Message: "Invalid token type", File: "test", Line: 1, Column: 1, LineText: "!hello"},
+		},
+		{
+			name:  "Invalid token 2",
+			input: "1383!",
+			want:  &plbErrors.PLBError{ErrorCode: "Lexer", Message: "Invalid token type", File: "test", Line: 1, Column: 5, LineText: "1383!"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reader := bufio.NewReader(strings.NewReader(tt.input))
+			l := New(reader, "test")
+			cont := true
+			for cont {
+				_, err := l.NextToken()
+				if err != nil {
+					if err.Error() != tt.want.Error() {
+						t.Errorf("got %q, want %q", err, tt.want)
+					}
+					cont = false
+				}
+			}
+
 		})
 	}
 }

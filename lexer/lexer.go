@@ -1,16 +1,24 @@
 package lexer
 
 import (
+	"PLB-Interpreter/plbErrors"
 	"PLB-Interpreter/tokens"
 	"bufio"
+	"bytes"
+	"errors"
+	"io"
 )
 
 type Lexer struct {
 	input        *bufio.Reader
-	position     int  // current position in input (points to current char)
-	readPosition int  // current reading position in input (after current char)
-	ch           byte // current char under examination
-	fileName     string
+	position     int      // current position in input (points to current char)
+	readPosition int      // current reading position in input (after current char)
+	ch           byte     // current char under examination
+	fileName     string   // filename of the file being lexed
+	line         int      // currently processed line number
+	col          int      // currently processed column/character/byte number
+	lines        []string // lines of the file being lexed
+	errors       []error  // errors encountered during lexing
 }
 
 // New Constructor for a new Lexer object, takes a bufio.Reader and the filename as inputs,
@@ -19,6 +27,29 @@ func New(is *bufio.Reader, filename string) *Lexer {
 	l := &Lexer{input: is, fileName: filename}
 	// setup pointers
 	l.readChar()
+
+	// setup vars
+	l.line = 1
+	l.col = 1
+
+	// some buffer fuckery to get the lines out of the reader WITHOUT advancing the pointers of the reader
+	var contents []byte
+	contents = append(contents, l.ch)
+	remainder, _ := is.Peek(is.Size())
+	contents = append(contents, remainder...)
+	lines := bufio.NewReader(bytes.NewReader(contents))
+	for {
+		line, err := lines.ReadString('\n')
+		if errors.Is(err, io.EOF) {
+			l.lines = append(l.lines, line)
+			break
+		}
+		if err != nil {
+			break
+		}
+		l.lines = append(l.lines, line)
+	}
+
 	return l
 }
 
@@ -30,6 +61,7 @@ func (l *Lexer) readChar() {
 	l.position = l.readPosition
 	// advance readPosition by 1
 	l.readPosition += 1
+	l.col++
 }
 
 // newToken returns a new token with the given type and literal.
@@ -39,41 +71,46 @@ func newToken(tokenType tokens.TokenType, ch byte) tokens.Token {
 
 // NextToken returns the next token in the input stream.
 // It advances the lexer to the next token and returns the token.
-func (l *Lexer) NextToken() tokens.Token {
+func (l *Lexer) NextToken() (tokens.Token, error) {
 	var tok tokens.Token
 
-	char := l.ch
-
+	char := rune(l.ch)
 	switch char {
 	case ' ', '\t':
 		tok = newToken(tokens.WHITESPACE, l.ch)
 	case '\n', '\r':
 		tok = newToken(tokens.NEWLINE, l.ch)
+		l.line++
+		l.col = 0
 	case '-':
 		if l.isDigit(l.peekChar()) {
 			tok.Type = tokens.SIGNEDDNUM
 			tok.Literal = l.readDec()
-			return tok
+			return tok, nil
 		}
 	default:
 		if l.isHexDigit(l.ch) {
 			tok.Type = tokens.XNUM
 			tok.Literal = l.readHex()
-			return tok
+			return tok, nil
 		} else if l.isOctDigit(l.ch) {
 			tok.Type = tokens.ONUM
 			tok.Literal = l.readOct()
-			return tok
+			return tok, nil
 		} else if l.isDigit(l.ch) {
 			tok.Type = tokens.DNUM
 			tok.Literal = l.readDec()
-			return tok
+			return tok, nil
 		} else {
 			tok = newToken(tokens.ILLEGAL, l.ch)
+			err := plbErrors.NewPLBError("Lexer", "Invalid token type", l.fileName, l.line, l.col, l.lines[l.line-1])
+			l.errors = append(l.errors, err)
+			return tok, err
 		}
 	}
 	l.readChar()
-	return tok
+	l.col++
+	return tok, nil
 }
 
 // isDigit returns true if the given byte is a digit. (0-9)

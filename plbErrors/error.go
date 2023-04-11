@@ -1,4 +1,4 @@
-package error
+package plbErrors
 
 import (
 	"bytes"
@@ -27,7 +27,7 @@ func NewPLBError(errorCode string, message string, file string, line int, column
 	}
 }
 
-// Error returns a string representation of the error
+// Error returns a string representation of the plbErrors
 func (e *PLBError) Error() string {
 	var buffer bytes.Buffer
 	buffer.WriteString(fmt.Sprintf("Error %s: %s\n", e.ErrorCode, e.Message))
