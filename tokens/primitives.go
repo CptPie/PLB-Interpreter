@@ -1,11 +1,14 @@
 package tokens
 
+import "strings"
+
 type TokenType string // Type of token
 
 const (
 	// Boilerplate
 	ILLEGAL = "ILLEGAL"
 	EOF     = "EOF"
+	IDENT   = "IDENT" // Identifier
 
 	// Whitespace
 	BLANK      = "BLANK"      // Space
@@ -49,7 +52,7 @@ const (
 	ANYCHAR   = "ANYCHAR"   // Any character in the character set
 	ANYSTRING = "ANYSTRING" // zero or more characters or WHITESPACE, or both, delimited by end of line
 	NULLLINE  = "NULLLINE"  // A line with no characters, only WHITESPACE, delimited by end of line, subset of COMMENT
-	COMMENT   = "COMMENT"   // A line with a comment, delimited by end of line, indicated by leading . * or +
+	COMMENT   = "COMMENT"   // A line with a comment, delimited by end of line, indicated by leading . * or +, following newline is IMPLIED and will not be detected by the tokenizer
 
 	// Labels
 	LABEL          = "LABEL"          // one or more ALPHACHAR, literal $, DIGIT, or _
@@ -93,15 +96,27 @@ const (
 	PFILE = "PFILE" // a print file variable, is a VARLABEL
 )
 
-var prepList = []string{
-	"FROM",
-	"TO",
-	"INTO",
-	"IN",
-	"BY",
-	"OF",
-	"WITH",
-	"USING",
+var keywords = map[string]TokenType{
+	"AND":   AND,
+	"OR":    OR,
+	"NOT":   NOT,
+	"FROM":  PREP,
+	"TO":    PREP,
+	"INTO":  PREP,
+	"IN":    PREP,
+	"BY":    PREP,
+	"OF":    PREP,
+	"WITH":  PREP,
+	"USING": PREP,
+}
+
+func LookupIdent(ident string) TokenType {
+	ident = strings.ToUpper(ident)
+	if tok, ok := keywords[ident]; ok {
+		return tok
+	}
+
+	return IDENT
 }
 
 // Token is a token returned by the lexer

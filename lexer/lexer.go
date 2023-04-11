@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"strings"
 )
 
 type Lexer struct {
@@ -18,6 +19,7 @@ type Lexer struct {
 	line         int      // currently processed line number
 	col          int      // currently processed column/character/byte number
 	lines        []string // lines of the file being lexed
+	lineHadNonWS bool     // whether the current line had non-whitespace characters
 	errors       []error  // errors encountered during lexing
 }
 
@@ -74,42 +76,96 @@ func newToken(tokenType tokens.TokenType, ch byte) tokens.Token {
 func (l *Lexer) NextToken() (tokens.Token, error) {
 	var tok tokens.Token
 
-	char := rune(l.ch)
-	switch char {
+	switch l.ch {
+	case 0:
+		tok = newToken(tokens.EOF, '\x00')
+	case '.':
+		if !l.lineHadNonWS {
+			tok.Type = tokens.COMMENT
+			currLine := l.lines[l.line-1]
+			if currLine[len(currLine)-1] == '\r' || currLine[len(currLine)-1] == '\n' {
+				currLine = currLine[:len(currLine)-1]
+			}
+			tok.Literal = strings.TrimSpace(currLine)
+			l.consumeLine()
+		}
 	case ' ', '\t':
 		tok = newToken(tokens.WHITESPACE, l.ch)
 	case '\n', '\r':
-		tok = newToken(tokens.NEWLINE, l.ch)
-		l.line++
-		l.col = 0
+		if !l.lineHadNonWS {
+			tok.Type = tokens.NULLLINE
+			tok.Literal = ""
+			l.consumeLine()
+			l.line++
+			l.col = 0
+			l.lineHadNonWS = false
+		} else {
+			tok = newToken(tokens.NEWLINE, l.ch)
+			l.line++
+			l.col = 0
+			l.lineHadNonWS = false
+		}
 	case '$':
-		tok = newToken(tokens.CURRENCY, l.ch)
+		if !l.isLetter(l.peekChar()) {
+			tok = newToken(tokens.CURRENCY, l.ch)
+			l.lineHadNonWS = true
+		}
 	case '#':
 		tok = newToken(tokens.FORCING, l.ch)
+		l.lineHadNonWS = true
 	case ',', ':':
 		tok = newToken(tokens.COMMA, l.ch)
+		l.lineHadNonWS = true
 	case ';':
 		tok = newToken(tokens.SEMICOLON, l.ch)
+		l.lineHadNonWS = true
 	case '(':
 		tok = newToken(tokens.LPAREN, l.ch)
+		l.lineHadNonWS = true
 	case ')':
 		tok = newToken(tokens.RPAREN, l.ch)
+		l.lineHadNonWS = true
 	case '*':
-		if l.peekChar() == '*' {
-			tok.Type = tokens.POW
-			tok.Literal = "**"
-			l.readChar()
-			l.col++
+		if !l.lineHadNonWS {
+			tok.Type = tokens.COMMENT
+			currLine := l.lines[l.line-1]
+			if currLine[len(currLine)-1] == '\r' || currLine[len(currLine)-1] == '\n' {
+				currLine = currLine[:len(currLine)-1]
+			}
+			tok.Literal = strings.TrimSpace(currLine)
+			l.consumeLine()
 		} else {
-			tok = newToken(tokens.ASTER, l.ch)
+			l.lineHadNonWS = true
+			if l.peekChar() == '*' {
+				tok.Type = tokens.POW
+				tok.Literal = "**"
+				l.readChar()
+				l.col++
+			} else {
+				tok = newToken(tokens.ASTER, l.ch)
+			}
 		}
 	case '/':
+		l.lineHadNonWS = true
 		tok = newToken(tokens.SLASH, l.ch)
 	case '+':
-		tok = newToken(tokens.PLUS, l.ch)
+		if !l.lineHadNonWS {
+			tok.Type = tokens.COMMENT
+			currLine := l.lines[l.line-1]
+			if currLine[len(currLine)-1] == '\r' || currLine[len(currLine)-1] == '\n' {
+				currLine = currLine[:len(currLine)-1]
+			}
+			tok.Literal = strings.TrimSpace(currLine)
+			l.consumeLine()
+		} else {
+			l.lineHadNonWS = true
+			tok = newToken(tokens.PLUS, l.ch)
+		}
 	case '-':
+		l.lineHadNonWS = true
 		tok = newToken(tokens.MINUS, l.ch)
 	case '<':
+		l.lineHadNonWS = true
 		if l.peekChar() == '=' {
 			tok.Type = tokens.LEQ
 			tok.Literal = "<="
@@ -124,6 +180,7 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 			tok = newToken(tokens.LT, l.ch)
 		}
 	case '>':
+		l.lineHadNonWS = true
 		if l.peekChar() == '=' {
 			tok.Type = tokens.GEQ
 			tok.Literal = ">="
@@ -133,8 +190,10 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 			tok = newToken(tokens.GT, l.ch)
 		}
 	case '=':
+		l.lineHadNonWS = true
 		tok = newToken(tokens.EQ, l.ch)
 	default:
+		l.lineHadNonWS = true
 		if l.isHexDigit(l.ch) {
 			tok.Type = tokens.XNUM
 			tok.Literal = l.readHex()
@@ -147,6 +206,10 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 			tok.Type = tokens.DNUM
 			tok.Literal = l.readDec()
 			return tok, nil
+		} else if l.isLetter(l.ch) {
+			tok.Literal = l.readIdentifier()
+			tok.Type = tokens.LookupIdent(tok.Literal)
+			return tok, nil
 		} else {
 			tok = newToken(tokens.ILLEGAL, l.ch)
 			err := plbErrors.NewPLBError("Lexer", "Invalid token type", l.fileName, l.line, l.col, l.lines[l.line-1])
@@ -155,7 +218,6 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 		}
 	}
 	l.readChar()
-	l.col++
 	return tok, nil
 }
 
@@ -227,4 +289,29 @@ func (l *Lexer) readDec() string {
 	}
 
 	return dec
+}
+
+func (l *Lexer) readIdentifier() string {
+	var lit string
+	for l.isLetter(l.ch) || l.isDigit(l.ch) {
+		lit += string(l.ch)
+		l.readChar()
+	}
+	return lit
+}
+
+func (l *Lexer) isLetter(ch byte) bool {
+	if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_' || ch == '$' {
+		return true
+	}
+	return false
+}
+
+func (l *Lexer) consumeLine() {
+	for l.ch != '\n' && l.ch != '\r' {
+		l.readChar()
+		if l.peekChar() == 0 {
+			break
+		}
+	}
 }

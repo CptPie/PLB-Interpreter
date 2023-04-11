@@ -16,8 +16,9 @@ func TestLexer_NextToken_DOXNUM(t *testing.T) {
 	}{
 		{
 			name:  "Spaces and tabs",
-			input: "   \t\t\t",
+			input: "2   \t\t\t",
 			want: []tokens.Token{
+				{Type: tokens.DNUM, Literal: "2"},
 				{Type: tokens.WHITESPACE, Literal: " "},
 				{Type: tokens.WHITESPACE, Literal: " "},
 				{Type: tokens.WHITESPACE, Literal: " "},
@@ -28,11 +29,15 @@ func TestLexer_NextToken_DOXNUM(t *testing.T) {
 		},
 		{
 			name:  "Newlines and carriage returns",
-			input: "\n\r\n\r",
+			input: "2\n2\r2\n2\r",
 			want: []tokens.Token{
+				{Type: tokens.DNUM, Literal: "2"},
 				{Type: tokens.NEWLINE, Literal: "\n"},
+				{Type: tokens.DNUM, Literal: "2"},
 				{Type: tokens.NEWLINE, Literal: "\r"},
+				{Type: tokens.DNUM, Literal: "2"},
 				{Type: tokens.NEWLINE, Literal: "\n"},
+				{Type: tokens.DNUM, Literal: "2"},
 				{Type: tokens.NEWLINE, Literal: "\r"},
 			},
 		},
@@ -437,6 +442,254 @@ func TestLexer_NextToken_Operators(t *testing.T) {
 				{Type: tokens.GEQ, Literal: ">="},
 				{Type: tokens.WHITESPACE, Literal: " "},
 				{Type: tokens.DNUM, Literal: "1"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reader := bufio.NewReader(strings.NewReader(tt.input))
+			l := New(reader, "")
+			for i, want := range tt.want {
+				got, _ := l.NextToken()
+				if got != want {
+					t.Errorf("Test %d: got %q, want %q", i, got, want)
+				}
+			}
+		})
+	}
+}
+
+func TestLexer_NextToken_KeywordsAndIdentifiers(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  []tokens.Token
+	}{
+		{
+			name:  "and",
+			input: `foo and bar`,
+			want: []tokens.Token{
+				{Type: tokens.IDENT, Literal: "foo"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.AND, Literal: "and"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.IDENT, Literal: "bar"},
+			},
+		},
+		{
+			name:  "AND",
+			input: `foo AND bar`,
+			want: []tokens.Token{
+				{Type: tokens.IDENT, Literal: "foo"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.AND, Literal: "AND"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.IDENT, Literal: "bar"},
+			},
+		},
+		{
+			name:  "or",
+			input: `foo or bar`,
+			want: []tokens.Token{
+				{Type: tokens.IDENT, Literal: "foo"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.OR, Literal: "or"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.IDENT, Literal: "bar"},
+			},
+		},
+		{
+			name:  "OR",
+			input: `foo OR bar`,
+			want: []tokens.Token{
+				{Type: tokens.IDENT, Literal: "foo"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.OR, Literal: "OR"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.IDENT, Literal: "bar"},
+			},
+		},
+		{
+			name:  "NOT",
+			input: `NOT bar`,
+			want: []tokens.Token{
+				{Type: tokens.NOT, Literal: "NOT"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.IDENT, Literal: "bar"},
+			},
+		},
+		{
+			name:  "preps",
+			input: `FROM a TO b INTO c IN d BY e OF f WITH g USING h`,
+			want: []tokens.Token{
+				{Type: tokens.PREP, Literal: "FROM"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.IDENT, Literal: "a"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.PREP, Literal: "TO"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.IDENT, Literal: "b"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.PREP, Literal: "INTO"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.IDENT, Literal: "c"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.PREP, Literal: "IN"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.IDENT, Literal: "d"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.PREP, Literal: "BY"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.IDENT, Literal: "e"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.PREP, Literal: "OF"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.IDENT, Literal: "f"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.PREP, Literal: "WITH"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.IDENT, Literal: "g"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.PREP, Literal: "USING"},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.IDENT, Literal: "h"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reader := bufio.NewReader(strings.NewReader(tt.input))
+			l := New(reader, "")
+			for i, want := range tt.want {
+				got, _ := l.NextToken()
+				if got != want {
+					t.Errorf("Test %d: got %q, want %q", i, got, want)
+				}
+			}
+		})
+	}
+}
+
+func TestLexer_NextToken_Comments(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  []tokens.Token
+	}{
+		{
+			name:  "single line comment form .",
+			input: `. this is a comment`,
+			want: []tokens.Token{
+				{Type: tokens.COMMENT, Literal: ". this is a comment"},
+			},
+		},
+		{
+			name: "single line comment form.  with newline",
+			input: ` . this is a comment
+`,
+			want: []tokens.Token{
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.COMMENT, Literal: ". this is a comment"},
+				{Type: tokens.EOF, Literal: "\x00"},
+			},
+		},
+		{
+			name: "single line comment form . enclosed with code",
+			input: `foo
+
+   			. this is a comment
+bar`,
+			want: []tokens.Token{
+				{Type: tokens.IDENT, Literal: "foo"},
+				{Type: tokens.NEWLINE, Literal: "\n"},
+				{Type: tokens.NULLLINE, Literal: ""},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.WHITESPACE, Literal: "\t"},
+				{Type: tokens.WHITESPACE, Literal: "\t"},
+				{Type: tokens.WHITESPACE, Literal: "\t"},
+				{Type: tokens.COMMENT, Literal: ". this is a comment"},
+				{Type: tokens.IDENT, Literal: "bar"},
+				{Type: tokens.EOF, Literal: "\x00"},
+			},
+		},
+		{
+			name:  "single line comment form *",
+			input: `* this is a comment`,
+			want: []tokens.Token{
+				{Type: tokens.COMMENT, Literal: "* this is a comment"},
+			},
+		},
+		{
+			name: "single line comment form * with newline",
+			input: ` * this is a comment
+`,
+			want: []tokens.Token{
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.COMMENT, Literal: "* this is a comment"},
+				{Type: tokens.EOF, Literal: "\x00"},
+			},
+		},
+		{
+			name: "single line comment form * enclosed with code",
+			input: `foo
+
+   			* this is a comment
+bar`,
+			want: []tokens.Token{
+				{Type: tokens.IDENT, Literal: "foo"},
+				{Type: tokens.NEWLINE, Literal: "\n"},
+				{Type: tokens.NULLLINE, Literal: ""},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.WHITESPACE, Literal: "\t"},
+				{Type: tokens.WHITESPACE, Literal: "\t"},
+				{Type: tokens.WHITESPACE, Literal: "\t"},
+				{Type: tokens.COMMENT, Literal: "* this is a comment"},
+				{Type: tokens.IDENT, Literal: "bar"},
+				{Type: tokens.EOF, Literal: "\x00"},
+			},
+		},
+		{
+			name:  "single line comment form +",
+			input: `+ this is a comment`,
+			want: []tokens.Token{
+				{Type: tokens.COMMENT, Literal: "+ this is a comment"},
+			},
+		},
+		{
+			name: "single line comment form + with newline",
+			input: ` + this is a comment
+`,
+			want: []tokens.Token{
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.COMMENT, Literal: "+ this is a comment"},
+				{Type: tokens.EOF, Literal: "\x00"},
+			},
+		},
+		{
+			name: "single line comment form +gc enclosed with code",
+			input: `foo
+
+   			+ this is a comment
+bar`,
+			want: []tokens.Token{
+				{Type: tokens.IDENT, Literal: "foo"},
+				{Type: tokens.NEWLINE, Literal: "\n"},
+				{Type: tokens.NULLLINE, Literal: ""},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.WHITESPACE, Literal: "\t"},
+				{Type: tokens.WHITESPACE, Literal: "\t"},
+				{Type: tokens.WHITESPACE, Literal: "\t"},
+				{Type: tokens.COMMENT, Literal: "+ this is a comment"},
+				{Type: tokens.IDENT, Literal: "bar"},
+				{Type: tokens.EOF, Literal: "\x00"},
 			},
 		},
 	}
