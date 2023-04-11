@@ -82,12 +82,58 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 		tok = newToken(tokens.NEWLINE, l.ch)
 		l.line++
 		l.col = 0
-	case '-':
-		if l.isDigit(l.peekChar()) {
-			tok.Type = tokens.SIGNEDDNUM
-			tok.Literal = l.readDec()
-			return tok, nil
+	case '$':
+		tok = newToken(tokens.CURRENCY, l.ch)
+	case '#':
+		tok = newToken(tokens.FORCING, l.ch)
+	case ',', ':':
+		tok = newToken(tokens.COMMA, l.ch)
+	case ';':
+		tok = newToken(tokens.SEMICOLON, l.ch)
+	case '(':
+		tok = newToken(tokens.LPAREN, l.ch)
+	case ')':
+		tok = newToken(tokens.RPAREN, l.ch)
+	case '*':
+		if l.peekChar() == '*' {
+			tok.Type = tokens.POW
+			tok.Literal = "**"
+			l.readChar()
+			l.col++
+		} else {
+			tok = newToken(tokens.ASTER, l.ch)
 		}
+	case '/':
+		tok = newToken(tokens.SLASH, l.ch)
+	case '+':
+		tok = newToken(tokens.PLUS, l.ch)
+	case '-':
+		tok = newToken(tokens.MINUS, l.ch)
+	case '<':
+		if l.peekChar() == '=' {
+			tok.Type = tokens.LEQ
+			tok.Literal = "<="
+			l.readChar()
+			l.col++
+		} else if l.peekChar() == '>' {
+			tok.Type = tokens.NEQ
+			tok.Literal = "<>"
+			l.readChar()
+			l.col++
+		} else {
+			tok = newToken(tokens.LT, l.ch)
+		}
+	case '>':
+		if l.peekChar() == '=' {
+			tok.Type = tokens.GEQ
+			tok.Literal = ">="
+			l.readChar()
+			l.col++
+		} else {
+			tok = newToken(tokens.GT, l.ch)
+		}
+	case '=':
+		tok = newToken(tokens.EQ, l.ch)
 	default:
 		if l.isHexDigit(l.ch) {
 			tok.Type = tokens.XNUM
@@ -174,11 +220,6 @@ func (l *Lexer) readOct() string {
 // readDec reads a decimal number from the input stream and returns it as a string.
 func (l *Lexer) readDec() string {
 	var dec string
-	// account for signed dnums
-	if l.ch == '-' {
-		dec += string(l.ch)
-		l.readChar()
-	}
 
 	for l.isDigit(l.ch) {
 		dec += string(l.ch)
