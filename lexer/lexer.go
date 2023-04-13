@@ -209,7 +209,7 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 			return tok, nil
 		} else {
 			tok = newToken(tokens.ILLEGAL, l.ch)
-			err := plbErrors.NewPLBError("Lexer", "Invalid token type", l.fileName, l.line, l.col, l.lines[l.line-1])
+			err := plbErrors.NewPLBError("Lexer", "Invalid token type", l.fileName, l.line, l.col, l.lines[l.line-1][:len(l.lines[l.line-1])-1])
 			l.errors = append(l.errors, err)
 			return tok, err
 		}

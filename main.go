@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	path := "test.plb"
+	path := "examples/test.plb"
 	file, err := os.Open(path)
 	if err != nil {
 		panic(err)
