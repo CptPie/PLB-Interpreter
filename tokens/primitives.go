@@ -1,6 +1,9 @@
 package tokens
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type TokenType string // Type of token
 
@@ -29,11 +32,11 @@ const (
 	RPAREN = "RPAREN" // )
 
 	// Arithmetic Operators
-	PLUS  = "PLUS"  // +
-	MINUS = "MINUS" // -
-	ASTER = "ASTER" // *
-	SLASH = "SLASH" // /
-	POW   = "POW"   // **
+	PLUS     = "PLUS"     // +
+	MINUS    = "MINUS"    // -
+	ASTERISK = "ASTERISK" // *
+	SLASH    = "SLASH"    // /
+	POWER    = "POWER"    // **
 
 	// Logical Operators
 	EQ  = "EQ"  // =
@@ -123,4 +126,12 @@ func LookupIdent(ident string) TokenType {
 type Token struct {
 	Type    TokenType
 	Literal string
+}
+
+func (t Token) String() string {
+	if t.Type == WHITESPACE || t.Type == NEWLINE || t.Type == NULLLINE {
+		return fmt.Sprintf("[%s %q]", t.Type, t.Literal)
+	} else {
+		return fmt.Sprintf("[%s '%s']", t.Type, t.Literal)
+	}
 }

@@ -23,7 +23,7 @@ type Lexer struct {
 	errors       []error  // errors encountered during lexing
 }
 
-// New Constructor for a new Lexer object, takes a bufio.Reader and the filename as inputs,
+// New Constructor for a new Lexer object, takes a *bufio.Reader and the filename as inputs,
 // advances the lexer to the first character and returns a pointer to the new Lexer object.
 func New(is *bufio.Reader, filename string) *Lexer {
 	l := &Lexer{input: is, fileName: filename}
@@ -86,11 +86,11 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 
 		}
 	case ' ', '\t':
-		tok = newToken(tokens.WHITESPACE, l.ch)
+		tok.Type = tokens.WHITESPACE
+		tok.Literal = l.consumeWhiteSpace()
 	case '\n', '\r':
 		if !l.lineHadNonWS {
-			tok.Type = tokens.NULLLINE
-			tok.Literal = ""
+			tok = newToken(tokens.NULLLINE, l.ch)
 			l.consumeLine()
 			l.line++
 			l.col = 0
@@ -127,12 +127,12 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 		} else {
 			l.lineHadNonWS = true
 			if l.peekChar() == '*' {
-				tok.Type = tokens.POW
+				tok.Type = tokens.POWER
 				tok.Literal = "**"
 				l.readChar()
 				l.col++
 			} else {
-				tok = newToken(tokens.ASTER, l.ch)
+				tok = newToken(tokens.ASTERISK, l.ch)
 			}
 		}
 	case '/':
@@ -348,6 +348,8 @@ func (l *Lexer) handleComment() tokens.Token {
 	}
 	tok.Literal = strings.TrimSpace(currLine)
 	l.consumeLine()
+	l.line++
+	l.col = 0
 	return tok
 }
 
@@ -360,4 +362,17 @@ func (l *Lexer) containsNonNumerics(literal string) bool {
 		}
 	}
 	return false
+}
+
+func (l *Lexer) consumeWhiteSpace() string {
+	var whiteSpace string
+	whiteSpace += string(l.ch)
+	for l.ch == ' ' || l.ch == '\t' {
+		if l.peekChar() != ' ' && l.peekChar() != '\t' {
+			break
+		}
+		l.readChar()
+		whiteSpace += string(l.ch)
+	}
+	return whiteSpace
 }
