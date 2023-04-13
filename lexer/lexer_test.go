@@ -707,3 +707,120 @@ bar`,
 		})
 	}
 }
+
+func TestLexer_NextToken_Strings(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  []tokens.Token
+	}{
+		{
+			name:  "single line string",
+			input: `"this is a string"`,
+			want: []tokens.Token{
+				{Type: tokens.LITERAL, Literal: `this is a string`},
+			},
+		},
+		{
+			name: "single line string with newline",
+			input: `"this is a string"
+`,
+			want: []tokens.Token{
+				{Type: tokens.LITERAL, Literal: `this is a string`},
+				{Type: tokens.NEWLINE, Literal: "\n"},
+				{Type: tokens.EOF, Literal: "\x00"},
+			},
+		},
+		{
+			name: "single line string enclosed with code",
+			input: `foo
+
+   			"this is a string"
+bar`,
+			want: []tokens.Token{
+				{Type: tokens.IDENT, Literal: "foo"},
+				{Type: tokens.NEWLINE, Literal: "\n"},
+				{Type: tokens.NULLLINE, Literal: ""},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.WHITESPACE, Literal: " "},
+				{Type: tokens.WHITESPACE, Literal: "\t"},
+				{Type: tokens.WHITESPACE, Literal: "\t"},
+				{Type: tokens.WHITESPACE, Literal: "\t"},
+				{Type: tokens.LITERAL, Literal: `this is a string`},
+				{Type: tokens.NEWLINE, Literal: "\n"},
+				{Type: tokens.IDENT, Literal: "bar"},
+				{Type: tokens.EOF, Literal: "\x00"},
+			},
+		},
+		{
+			name:  "single line string with escaped quote",
+			input: `"this is a ""string"""`,
+			want: []tokens.Token{
+				{Type: tokens.LITERAL, Literal: `this is a "string"`},
+			},
+		},
+		{
+			name:  "single line string with escaped quote 2",
+			input: `"this is a ""string"" with some more text"`,
+			want: []tokens.Token{
+				{Type: tokens.LITERAL, Literal: `this is a "string" with some more text`},
+			},
+		},
+		{
+			name:  "numericliteral starting with '-'",
+			input: `"-1"`,
+			want: []tokens.Token{
+				{Type: tokens.NUMERICLITERAL, Literal: `-1`},
+			},
+		},
+		{
+			name:  "numericliteral starting with '.'",
+			input: `".1"`,
+			want: []tokens.Token{
+				{Type: tokens.NUMERICLITERAL, Literal: `.1`},
+			},
+		},
+		{
+			name:  "numericliteral starting with '1'",
+			input: `"1189"`,
+			want: []tokens.Token{
+				{Type: tokens.NUMERICLITERAL, Literal: `1189`},
+			},
+		},
+		{
+			name:  "literal starting with '-'",
+			input: `"-asdf"`,
+			want: []tokens.Token{
+				{Type: tokens.LITERAL, Literal: `-asdf`},
+			},
+		},
+		{
+			name:  "literal starting with '.'",
+			input: `".asdf"`,
+			want: []tokens.Token{
+				{Type: tokens.LITERAL, Literal: `.asdf`},
+			},
+		},
+		{
+			name:  "literal starting with '1'",
+			input: `"1asdf"`,
+			want: []tokens.Token{
+				{Type: tokens.LITERAL, Literal: `1asdf`},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reader := bufio.NewReader(strings.NewReader(tt.input))
+			l := New(reader, "")
+			for i, want := range tt.want {
+				got, _ := l.NextToken()
+				if got != want {
+					t.Errorf("Test %d: got %q, want %q", i, got, want)
+				}
+			}
+		})
+	}
+}

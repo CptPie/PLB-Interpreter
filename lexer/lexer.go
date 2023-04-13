@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"strings"
+	"unicode"
 )
 
 type Lexer struct {
@@ -175,6 +176,19 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 	case '=':
 		l.lineHadNonWS = true
 		tok = newToken(tokens.EQ, l.ch)
+	case '"':
+		if l.peekChar() == '-' || l.isDigit(l.peekChar()) || l.peekChar() == '.' {
+			tok.Type = tokens.NUMERICLITERAL
+			tok.Literal = l.readLiteral()
+			if l.containsNonNumerics(tok.Literal) {
+				tok.Type = tokens.LITERAL
+			}
+			l.lineHadNonWS = true
+		} else {
+			tok.Type = tokens.LITERAL
+			tok.Literal = l.readLiteral()
+			l.lineHadNonWS = true
+		}
 	default:
 		l.lineHadNonWS = true
 		if l.isHexDigit(l.ch) {
@@ -284,7 +298,7 @@ func (l *Lexer) readIdentifier() string {
 }
 
 func (l *Lexer) isLetter(ch byte) bool {
-	if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_' || ch == '$' {
+	if unicode.IsLetter(rune(ch)) || ch == '_' || ch == '$' {
 		return true
 	}
 	return false
@@ -299,6 +313,32 @@ func (l *Lexer) consumeLine() {
 	}
 }
 
+func (l *Lexer) readLiteral() string {
+	var lit string
+	// Skip the opening quote
+	l.position = l.readPosition
+	l.readPosition++
+	for {
+		l.readChar()
+		if l.ch == '"' {
+			if l.peekChar() == '"' {
+				l.readChar()
+				// Skip the second quote
+				l.position = l.readPosition
+				l.readPosition++
+			} else {
+				// Skip the closing quote
+				l.position = l.readPosition
+				l.readPosition++
+				break
+			}
+		}
+		lit += string(l.ch)
+	}
+
+	return lit
+}
+
 func (l *Lexer) handleComment() tokens.Token {
 	var tok tokens.Token
 	tok.Type = tokens.COMMENT
@@ -309,4 +349,15 @@ func (l *Lexer) handleComment() tokens.Token {
 	tok.Literal = strings.TrimSpace(currLine)
 	l.consumeLine()
 	return tok
+}
+
+func (l *Lexer) containsNonNumerics(literal string) bool {
+	for _, character := range literal {
+		if character != '-' && character != '.' {
+			if !unicode.IsNumber(character) {
+				return true
+			}
+		}
+	}
+	return false
 }
