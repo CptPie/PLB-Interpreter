@@ -4,7 +4,6 @@ import (
 	"PLB-Interpreter/plbErrors"
 	"PLB-Interpreter/tokens"
 	"bufio"
-	"bytes"
 	"errors"
 	"io"
 	"strings"
@@ -27,30 +26,31 @@ type Lexer struct {
 // advances the lexer to the first character and returns a pointer to the new Lexer object.
 func New(is *bufio.Reader, filename string) *Lexer {
 	l := &Lexer{input: is, fileName: filename}
+
+	// read all lines from the input stream
+	for {
+		line, err := l.input.ReadString('\n')
+		if errors.Is(err, io.EOF) {
+			// we encountered the EOF, so we add the last line and break
+			l.lines = append(l.lines, line)
+			break
+		}
+		if err != nil {
+			// we encountered an error
+			break
+		}
+		l.lines = append(l.lines, line)
+	}
+
+	// reset the reader to the beginning by adding in all the lines again
+	l.input.Reset(strings.NewReader(strings.Join(l.lines, "")))
+
 	// setup pointers
 	l.readChar()
 
 	// setup vars
 	l.line = 1
 	l.col = 1
-
-	// some buffer fuckery to get the lines out of the reader WITHOUT advancing the pointers of the reader
-	var contents []byte
-	contents = append(contents, l.ch)
-	remainder, _ := is.Peek(is.Size())
-	contents = append(contents, remainder...)
-	lines := bufio.NewReader(bytes.NewReader(contents))
-	for {
-		line, err := lines.ReadString('\n')
-		if errors.Is(err, io.EOF) {
-			l.lines = append(l.lines, line)
-			break
-		}
-		if err != nil {
-			break
-		}
-		l.lines = append(l.lines, line)
-	}
 
 	return l
 }
