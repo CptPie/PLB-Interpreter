@@ -11,8 +11,8 @@ type PLBError struct {
 	Message    string // Error message, e.g. Invalid token type
 	File       string // Filename where the error occurred
 	LineNumber int    // LineNumber where the error occurred
-	Column     int    // Column number where the error occurred
-	LineText   string // Literal line contents where the error occurred
+	Column     int    // Column (number of character in the line) where the error occurred
+	LineText   string // Literal line contents where the error occurred to display to the user
 }
 
 // NewPLBError creates a new PLBError

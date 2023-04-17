@@ -113,6 +113,9 @@ var keywords = map[string]TokenType{
 	"USING": PREPOSITION,
 }
 
+// LookupIdent returns the token type for the given identifier
+// If the identifier is not a keyword, it returns IDENT
+// TODO: how should we handle the ¨non reserved keywords" issue of plb?
 func LookupIdent(ident string) TokenType {
 	ident = strings.ToUpper(ident)
 	if tok, ok := keywords[ident]; ok {
@@ -123,6 +126,10 @@ func LookupIdent(ident string) TokenType {
 }
 
 // Token is a token returned by the lexer
+// TODO think about:
+// Maybe adding in the positional data to the token would be useful
+// -> investigate later if its necessary for the parser/interpreter stage
+// If it is, should we use the column in the line or the Nth token in the line?
 type Token struct {
 	Type    TokenType
 	Literal string
