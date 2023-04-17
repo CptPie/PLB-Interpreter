@@ -16,7 +16,7 @@ type Lexer struct {
 	readPosition int      // current reading position in input (after current char)
 	ch           byte     // current char under examination
 	fileName     string   // filename of the file being lexed
-	line         int      // currently processed line number
+	lineNumber   int      // currently processed line number
 	col          int      // currently processed column/character/byte number
 	lines        []string // lines of the file being lexed
 	lineHadNonWS bool     // whether the current line had non-whitespace characters
@@ -50,7 +50,7 @@ func New(is *bufio.Reader, filename string) *Lexer {
 	l.readChar()
 
 	// setup vars
-	l.line = 1
+	l.lineNumber = 1
 	l.col = 1
 
 	return l
@@ -92,12 +92,12 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 		if !l.lineHadNonWS {
 			tok = newToken(tokens.NULLLINE, l.ch)
 			l.consumeLine()
-			l.line++
+			l.lineNumber++
 			l.col = 0
 			l.lineHadNonWS = false
 		} else {
 			tok = newToken(tokens.NEWLINE, l.ch)
-			l.line++
+			l.lineNumber++
 			l.col = 0
 			l.lineHadNonWS = false
 		}
@@ -209,7 +209,14 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 			return tok, nil
 		} else {
 			tok = newToken(tokens.ILLEGAL, l.ch)
-			err := plbErrors.NewPLBError("Lexer", "Invalid token type", l.fileName, l.line, l.col, l.lines[l.line-1][:len(l.lines[l.line-1])-1])
+			err := plbErrors.NewPLBError(
+				"Lexer",
+				"Invalid token type",
+				l.fileName,
+				l.lineNumber,
+				l.col,
+				strings.TrimRight(l.lines[l.lineNumber-1], "\r\n"),
+			)
 			l.errors = append(l.errors, err)
 			return tok, err
 		}
@@ -288,6 +295,8 @@ func (l *Lexer) readDec() string {
 	return dec
 }
 
+// readLiteral consumes a string literal from the input stream and returns it as a string.
+// It continues consuming until it finds a non Letter or non Digit character.
 func (l *Lexer) readIdentifier() string {
 	var lit string
 	for l.isLetter(l.ch) || l.isDigit(l.ch) {
@@ -297,6 +306,7 @@ func (l *Lexer) readIdentifier() string {
 	return lit
 }
 
+// isLetter returns true if the given byte is a letter. (a-z, A-Z, _, $)
 func (l *Lexer) isLetter(ch byte) bool {
 	if unicode.IsLetter(rune(ch)) || ch == '_' || ch == '$' {
 		return true
@@ -304,6 +314,8 @@ func (l *Lexer) isLetter(ch byte) bool {
 	return false
 }
 
+// consumeLine consumes the rest of the current lineNumber. The lexer pointers are advanced accordingly.
+// Newline characters are not consumed
 func (l *Lexer) consumeLine() {
 	for l.ch != '\n' && l.ch != '\r' {
 		l.readChar()
@@ -313,6 +325,9 @@ func (l *Lexer) consumeLine() {
 	}
 }
 
+// readLiteral consumes a string literal from the input stream and returns it as a string.
+// It continues consuming until it finds an unescaped closing quote. A double quote is escaped. ("" -> ")
+// The opening and closing quotes are consumed but not returned.
 func (l *Lexer) readLiteral() string {
 	var lit string
 	// Skip the opening quote
@@ -339,16 +354,18 @@ func (l *Lexer) readLiteral() string {
 	return lit
 }
 
+// handleComment consumes the rest of the current lineNumber and returns a COMMENT token.
+// The lexer pointers are advanced accordingly. The newline characters are not consumed.
 func (l *Lexer) handleComment() tokens.Token {
 	var tok tokens.Token
 	tok.Type = tokens.COMMENT
-	currLine := l.lines[l.line-1]
+	currLine := l.lines[l.lineNumber-1]
 	if currLine[len(currLine)-1] == '\r' || currLine[len(currLine)-1] == '\n' {
 		currLine = currLine[:len(currLine)-1]
 	}
 	tok.Literal = strings.TrimSpace(currLine)
 	l.consumeLine()
-	l.line++
+	l.lineNumber++
 	l.col = 0
 	return tok
 }

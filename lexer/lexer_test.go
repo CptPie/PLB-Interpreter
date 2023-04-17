@@ -88,12 +88,12 @@ func TestLexer_NextToken_Error(t *testing.T) {
 		{
 			name:  "Invalid token 1",
 			input: "!hello",
-			want:  &plbErrors.PLBError{ErrorCode: "Lexer", Message: "Invalid token type", File: "test", Line: 1, Column: 1, LineText: "!hello"},
+			want:  &plbErrors.PLBError{ErrorCode: "Lexer", Message: "Invalid token type", File: "test", LineNumber: 1, Column: 1, LineText: "!hello"},
 		},
 		{
 			name:  "Invalid token 2",
 			input: "1383!",
-			want:  &plbErrors.PLBError{ErrorCode: "Lexer", Message: "Invalid token type", File: "test", Line: 1, Column: 5, LineText: "1383!"},
+			want:  &plbErrors.PLBError{ErrorCode: "Lexer", Message: "Invalid token type", File: "test", LineNumber: 1, Column: 5, LineText: "1383!"},
 		},
 	}
 
