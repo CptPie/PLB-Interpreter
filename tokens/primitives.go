@@ -103,14 +103,14 @@ var keywords = map[string]TokenType{
 	"AND":   AND,
 	"OR":    OR,
 	"NOT":   NOT,
-	"FROM":  PREP,
-	"TO":    PREP,
-	"INTO":  PREP,
-	"IN":    PREP,
-	"BY":    PREP,
-	"OF":    PREP,
-	"WITH":  PREP,
-	"USING": PREP,
+	"FROM":  PREPOSITION,
+	"TO":    PREPOSITION,
+	"INTO":  PREPOSITION,
+	"IN":    PREPOSITION,
+	"BY":    PREPOSITION,
+	"OF":    PREPOSITION,
+	"WITH":  PREPOSITION,
+	"USING": PREPOSITION,
 }
 
 func LookupIdent(ident string) TokenType {
