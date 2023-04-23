@@ -2,14 +2,14 @@ package main
 
 import (
 	"PLB-Interpreter/lexer"
-	"PLB-Interpreter/tokens"
+	"PLB-Interpreter/parser"
 	"bufio"
 	"fmt"
 	"os"
 )
 
 func main() {
-	path := "examples/test.plb"
+	path := "examples/strings.plb"
 	file, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -18,21 +18,27 @@ func main() {
 
 	reader := bufio.NewReader(file)
 	lex := lexer.New(reader, path)
+	pars := parser.New(lex)
 
-	var toks []tokens.Token
+	prog := pars.ParseProgram()
 
-	for {
-		tok, err := lex.NextToken()
+	fmt.Println(prog)
 
-		toks = append(toks, tok)
+	//for {
+	//	tok, err := lex.NextToken()
+	//
+	//	if tok.Type == tokens.COMMENT || tok.Type == tokens.NEWLINE || tok.Type == tokens.NULLLINE {
+	//		fmt.Println(tok)
+	//	} else {
+	//		fmt.Print(tok)
+	//	}
+	//
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//	if tok.Type == tokens.EOF {
+	//		break
+	//	}
+	//}
 
-		if err != nil {
-			panic(err)
-		}
-		if tok.Type == tokens.EOF {
-			break
-		}
-	}
-
-	fmt.Println(toks)
 }

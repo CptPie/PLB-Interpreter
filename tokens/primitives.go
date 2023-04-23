@@ -131,8 +131,12 @@ func LookupIdent(ident string) TokenType {
 // -> investigate later if its necessary for the parser/interpreter stage
 // If it is, should we use the column in the line or the Nth token in the line?
 type Token struct {
-	Type    TokenType
-	Literal string
+	Type     TokenType
+	Literal  string
+	Line     int
+	Col      int
+	LineTxt  string
+	FileName string
 }
 
 func (t Token) String() string {

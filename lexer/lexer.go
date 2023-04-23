@@ -68,8 +68,15 @@ func (l *Lexer) readChar() {
 }
 
 // newToken returns a new token with the given type and literal.
-func newToken(tokenType tokens.TokenType, ch byte) tokens.Token {
-	return tokens.Token{Type: tokenType, Literal: string(ch)}
+func (l *Lexer) newToken(tokenType tokens.TokenType, ch byte) tokens.Token {
+	return tokens.Token{
+		Type:     tokenType,
+		Literal:  string(ch),
+		Line:     l.lineNumber,
+		Col:      l.col,
+		FileName: l.fileName,
+		LineTxt:  l.lines[l.lineNumber-1],
+	}
 }
 
 // NextToken returns the next token in the input stream.
@@ -79,47 +86,53 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 
 	switch l.ch {
 	case 0:
-		tok = newToken(tokens.EOF, '\x00')
+		tok = l.newToken(tokens.EOF, '\x00')
 	case '.':
 		if !l.lineHadNonWS {
 			tok = l.handleComment()
-
 		}
 	case ' ', '\t':
+		tok = tokens.Token{
+			Line:     l.lineNumber,
+			Col:      l.col,
+			LineTxt:  l.lines[l.lineNumber-1],
+			FileName: l.fileName,
+		}
 		tok.Type = tokens.WHITESPACE
 		tok.Literal = l.consumeWhiteSpace()
+
 	case '\n', '\r':
 		if !l.lineHadNonWS {
-			tok = newToken(tokens.NULLLINE, l.ch)
+			tok = l.newToken(tokens.NULLLINE, l.ch)
 			l.consumeLine()
 			l.lineNumber++
 			l.col = 0
 			l.lineHadNonWS = false
 		} else {
-			tok = newToken(tokens.NEWLINE, l.ch)
+			tok = l.newToken(tokens.NEWLINE, l.ch)
 			l.lineNumber++
 			l.col = 0
 			l.lineHadNonWS = false
 		}
 	case '$':
 		if !l.isLetter(l.peekChar()) {
-			tok = newToken(tokens.CURRENCY, l.ch)
+			tok = l.newToken(tokens.CURRENCY, l.ch)
 			l.lineHadNonWS = true
 		}
 	case '#':
-		tok = newToken(tokens.FORCING, l.ch)
+		tok = l.newToken(tokens.FORCING, l.ch)
 		l.lineHadNonWS = true
 	case ',', ':':
-		tok = newToken(tokens.COMMA, l.ch)
+		tok = l.newToken(tokens.COMMA, l.ch)
 		l.lineHadNonWS = true
 	case ';':
-		tok = newToken(tokens.SEMICOLON, l.ch)
+		tok = l.newToken(tokens.SEMICOLON, l.ch)
 		l.lineHadNonWS = true
 	case '(':
-		tok = newToken(tokens.LPAREN, l.ch)
+		tok = l.newToken(tokens.LPAREN, l.ch)
 		l.lineHadNonWS = true
 	case ')':
-		tok = newToken(tokens.RPAREN, l.ch)
+		tok = l.newToken(tokens.RPAREN, l.ch)
 		l.lineHadNonWS = true
 	case '*':
 		if !l.lineHadNonWS {
@@ -127,57 +140,87 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 		} else {
 			l.lineHadNonWS = true
 			if l.peekChar() == '*' {
+				tok = tokens.Token{
+					Line:     l.lineNumber,
+					Col:      l.col,
+					LineTxt:  l.lines[l.lineNumber-1],
+					FileName: l.fileName,
+				}
 				tok.Type = tokens.POWER
 				tok.Literal = "**"
 				l.readChar()
 				l.col++
 			} else {
-				tok = newToken(tokens.ASTERISK, l.ch)
+				tok = l.newToken(tokens.ASTERISK, l.ch)
 			}
 		}
 	case '/':
 		l.lineHadNonWS = true
-		tok = newToken(tokens.SLASH, l.ch)
+		tok = l.newToken(tokens.SLASH, l.ch)
 	case '+':
 		if !l.lineHadNonWS {
 			tok = l.handleComment()
 		} else {
 			l.lineHadNonWS = true
-			tok = newToken(tokens.PLUS, l.ch)
+			tok = l.newToken(tokens.PLUS, l.ch)
 		}
 	case '-':
 		l.lineHadNonWS = true
-		tok = newToken(tokens.MINUS, l.ch)
+		tok = l.newToken(tokens.MINUS, l.ch)
 	case '<':
 		l.lineHadNonWS = true
 		if l.peekChar() == '=' {
+			tok = tokens.Token{
+				Line:     l.lineNumber,
+				Col:      l.col,
+				LineTxt:  l.lines[l.lineNumber-1],
+				FileName: l.fileName,
+			}
 			tok.Type = tokens.LEQ
 			tok.Literal = "<="
 			l.readChar()
 			l.col++
 		} else if l.peekChar() == '>' {
+			tok = tokens.Token{
+				Line:     l.lineNumber,
+				Col:      l.col,
+				LineTxt:  l.lines[l.lineNumber-1],
+				FileName: l.fileName,
+			}
 			tok.Type = tokens.NEQ
 			tok.Literal = "<>"
 			l.readChar()
 			l.col++
 		} else {
-			tok = newToken(tokens.LT, l.ch)
+			tok = l.newToken(tokens.LT, l.ch)
 		}
 	case '>':
 		l.lineHadNonWS = true
 		if l.peekChar() == '=' {
+			tok = tokens.Token{
+				Line:     l.lineNumber,
+				Col:      l.col,
+				LineTxt:  l.lines[l.lineNumber-1],
+				FileName: l.fileName,
+			}
 			tok.Type = tokens.GEQ
 			tok.Literal = ">="
 			l.readChar()
 			l.col++
 		} else {
-			tok = newToken(tokens.GT, l.ch)
+			tok = l.newToken(tokens.GT, l.ch)
 		}
 	case '=':
 		l.lineHadNonWS = true
-		tok = newToken(tokens.EQ, l.ch)
+		tok = l.newToken(tokens.EQ, l.ch)
 	case '"':
 		if l.peekChar() == '-' || l.isDigit(l.peekChar()) || l.peekChar() == '.' {
+			tok = tokens.Token{
+				Line:     l.lineNumber,
+				Col:      l.col,
+				LineTxt:  l.lines[l.lineNumber-1],
+				FileName: l.fileName,
+			}
 			tok.Type = tokens.NUMERICLITERAL
 			tok.Literal = l.readLiteral()
 			if l.containsNonNumerics(tok.Literal) {
@@ -185,6 +228,12 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 			}
 			l.lineHadNonWS = true
 		} else {
+			tok = tokens.Token{
+				Line:     l.lineNumber,
+				Col:      l.col,
+				LineTxt:  l.lines[l.lineNumber-1],
+				FileName: l.fileName,
+			}
 			tok.Type = tokens.LITERAL
 			tok.Literal = l.readLiteral()
 			l.lineHadNonWS = true
@@ -192,23 +241,53 @@ func (l *Lexer) NextToken() (tokens.Token, error) {
 	default:
 		l.lineHadNonWS = true
 		if l.isHexDigit(l.ch) {
+			tok = tokens.Token{
+				Line:     l.lineNumber,
+				Col:      l.col,
+				LineTxt:  l.lines[l.lineNumber-1],
+				FileName: l.fileName,
+			}
 			tok.Type = tokens.XNUM
 			tok.Literal = l.readHex()
 			return tok, nil
 		} else if l.isOctDigit(l.ch) {
+			tok = tokens.Token{
+				Line:     l.lineNumber,
+				Col:      l.col,
+				LineTxt:  l.lines[l.lineNumber-1],
+				FileName: l.fileName,
+			}
 			tok.Type = tokens.ONUM
 			tok.Literal = l.readOct()
 			return tok, nil
 		} else if l.isDigit(l.ch) {
+			tok = tokens.Token{
+				Line:     l.lineNumber,
+				Col:      l.col,
+				LineTxt:  l.lines[l.lineNumber-1],
+				FileName: l.fileName,
+			}
 			tok.Type = tokens.DNUM
 			tok.Literal = l.readDec()
 			return tok, nil
 		} else if l.isLetter(l.ch) {
+			tok = tokens.Token{
+				Line:     l.lineNumber,
+				Col:      l.col,
+				LineTxt:  l.lines[l.lineNumber-1],
+				FileName: l.fileName,
+			}
 			tok.Literal = l.readIdentifier()
 			tok.Type = tokens.LookupIdent(tok.Literal)
 			return tok, nil
 		} else {
-			tok = newToken(tokens.ILLEGAL, l.ch)
+			tok = tokens.Token{
+				Line:     l.lineNumber,
+				Col:      l.col,
+				LineTxt:  l.lines[l.lineNumber-1],
+				FileName: l.fileName,
+			}
+			tok = l.newToken(tokens.ILLEGAL, l.ch)
 			err := plbErrors.NewPLBError(
 				"Lexer",
 				"Invalid token type",
