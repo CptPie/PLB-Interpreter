@@ -68,7 +68,10 @@ func (p *Parser) ParseProgram() *ast.Program {
 	program.Statements = []ast.Statement{}
 
 	for p.curToken.Type != tokens.EOF {
-		stmt := p.parseStatement()
+		stmt, err := p.parseStatement()
+		if err != nil {
+			return program
+		}
 		if stmt != nil {
 			program.Statements = append(program.Statements, stmt)
 		}
@@ -78,20 +81,24 @@ func (p *Parser) ParseProgram() *ast.Program {
 	return program
 }
 
-func (p *Parser) parseStatement() ast.Statement {
+func (p *Parser) parseStatement() (ast.Statement, error) {
 	if p.isValidStatement() {
 		fmt.Printf("Line: %d  is a statement line: %s", p.curToken.Line, p.curToken.LineTxt)
-		p.consumeTillNewline()
+		err := p.consumeTillNewline()
+		if err != nil {
+			return nil, err
+		}
+	} else if p.isValidLabel() {
+		fmt.Printf("Line: %d  is a label line: %s", p.curToken.Line, p.curToken.LineTxt)
+		err := p.consumeTillNewline()
+		if err != nil {
+			return nil, err
+		}
 	}
-	return nil
+	return nil, nil
 }
 
 func (p *Parser) isValidStatement() bool {
-	if (p.curToken.Type == tokens.IDENT && p.peekToken.Type == tokens.NEWLINE) ||
-		(p.curToken.Type == tokens.IDENT && p.peekToken.Type == tokens.WHITESPACE && p.peekToken2.Type == tokens.NEWLINE) {
-		// This is a label line
-		return true
-	}
 	if (p.curToken.Type == tokens.IDENT && p.peekToken.Type == tokens.WHITESPACE && p.peekToken2.Type == tokens.IDENT) ||
 		(p.curToken.Type == tokens.WHITESPACE && p.peekToken.Type == tokens.IDENT) {
 		// This is a statement line
@@ -100,8 +107,27 @@ func (p *Parser) isValidStatement() bool {
 	return false
 }
 
-func (p *Parser) consumeTillNewline() {
+func (p *Parser) isValidLabel() bool {
+	if (p.curToken.Type == tokens.IDENT && p.peekToken.Type == tokens.NEWLINE) ||
+		(p.curToken.Type == tokens.IDENT && p.peekToken.Type == tokens.WHITESPACE && p.peekToken2.Type == tokens.NEWLINE) {
+		// This is a label line
+		return true
+	}
+	return false
+}
+
+func (p *Parser) consumeTillNewline() error {
 	for p.curToken.Type != tokens.NEWLINE {
+		if has, errs := p.Errors(); has {
+			for _, err := range errs {
+				fmt.Println(err)
+			}
+			return fmt.Errorf("errors found")
+		}
+		if p.curToken.Type == tokens.EOF {
+			return nil
+		}
 		p.nextToken()
 	}
+	return nil
 }
